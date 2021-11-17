@@ -1,2 +1,5 @@
 # 3D-Android
-Android projects implemented with Java, OpenGL ES and XML.
+<p>
+This repository contains WebGL projects ported to Android Java, the NDK and OpenGL ES.
+I've currently uploaded Java for the 3D Views app. Tap to change scenes. Swipe to view.
+</p>
