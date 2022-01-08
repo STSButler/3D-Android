@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>    
+    <string name="app_name">3D Views</string>
+    <string name="set_views_message">Views</string>
+    <string name="set_effects_message">Effects</string>
+    <string name="set_views_type">Set Views</string>
+    <string name="set_effects_type">Set Effects</string>
+    <string-array name="set_views_array">
+    	<item>Islands</item>
+    	<item>Art Gallery</item>
+    	<item>Cartoon River</item>
+    	<item>Mars</item>
+    	<item>Lighthouse</item>
+        <item>Cube Grid</item>
+    </string-array>
+    <string-array name="set_effects_array">
+        <item>Cloud Effect</item>
+    	<item>Storm Effect</item>
+    </string-array>
+</resources>
