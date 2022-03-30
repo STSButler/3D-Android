@@ -5,8 +5,7 @@ import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.util.Log;
-
-import com.seventhundersoftware.cubeview.common.TextureHelper;
+import static com.seventhundersoftware.cubeview.CubeViewConstants.*;
 
 /***
  * Copyright (c) 2021 Amy Washburn Butler
@@ -22,12 +21,15 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
     private CubeViewRenderer mRenderer;
 	
     // Offsets for touch events	 
-    private float mPreviousX;
-    private float mPreviousY;
-    private final int I_MOVEMENT = 4;
+    private float mPriorSwipeX = 0;
+    private float mPriorSwipeY = 0;
+    private float mPriorTouchDownX = 0;
+    private float mPriorTouchDownY = 0;
+
     private static final String TAG="CubeViewGLSurfaceView()";
-    
+    private Context mContext = null;
     private float mDensity;
+    private int iBtnClick = I_ISLANDS;
         	
 	/***
 	Constructor
@@ -45,9 +47,9 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
 	*/	
 	public CubeViewGLSurfaceView(Context context, AttributeSet attrs)
 	{
-		super(context, attrs);		
+		super(context, attrs);
+		this.mContext = context;
 	}
-
 
 	/***
 	OpenGL ES canvas responds
@@ -58,8 +60,6 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
 	X and Y values might prove useful
 	if we want to see the top and bottom, not
 	just left and right sides of a view.
-
-	@param MotionEvent: event with X and Y properties.
 	@return boolean
 	*/
 	@Override
@@ -69,22 +69,36 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
 		{			
 			float x = event.getX();
 			float y = event.getY();
-
-			if (event.getAction() == MotionEvent.ACTION_MOVE)
+			int iEvent = event.getAction();
+			Log.d(TAG,"onTouchEvent event action:"+iEvent);
+			if (iEvent == MotionEvent.ACTION_MOVE)
 			{
 				if (mRenderer != null) {
 
-					float deltaX = (x - mPreviousX) / mDensity / 2f;
-					float deltaY = (y - mPreviousY) / mDensity / 2f;
+					float deltaX = (x - mPriorSwipeX) / mDensity / 2f;
+					float deltaY = (y - mPriorSwipeY) / mDensity / 2f;
 
 					float absY = Math.abs(y);
 					mRenderer.mFloatDeltY = deltaY;
 				}
 
-			}	
+			}
+			// Change views if player
+			// tapped down and up in same location.
+			else if (iEvent == MotionEvent.ACTION_UP){
+				Log.d(TAG,"onTouch Action up: "+iEvent);
+				Log.d(TAG,"current x:"+x+",y:"+y+",priorX:"+this.mPriorTouchDownX+",priorY:"+this.mPriorTouchDownY);
+				if(x == this.mPriorTouchDownX && y == this.mPriorTouchDownY){
+					this.assignView();
+				}
+			}
+			else if(iEvent == MotionEvent.ACTION_DOWN) {
+				this.mPriorTouchDownX = x;
+				this.mPriorTouchDownY = y;
+			}
 			
-			mPreviousX = x;
-			mPreviousY = Math.abs(y);
+			mPriorSwipeX = x;
+			mPriorSwipeY = Math.abs(y);
 			
 			return true;
 		}
@@ -94,10 +108,8 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
 		}		
 	}
 
-
 	/***
 	Assign our CubeViewRenderer
-	@param CubeViewRenderer: Derived from Renderer
 	@param density: float
 	*/
 	public void setRenderer(CubeViewRenderer renderer, float density)
@@ -110,5 +122,31 @@ public class CubeViewGLSurfaceView extends GLSurfaceView
 	@Override
 	public void onPause(){
 		super.onPause();
+	}
+
+	public void assignView(){
+		Log.d(TAG,"assignView() surfaceView.setTextView:");
+		iBtnClick++;
+		if(iBtnClick >= I_IMAGES){
+			iBtnClick = I_ISLANDS;
+		}
+		mRenderer.getImage(iBtnClick);
+		mRenderer.setTexView();
+		this.queueEvent(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				if(mRenderer != null){
+					Log.d(TAG,"surfaceview run():");
+					mRenderer.getImage(iBtnClick);
+					mRenderer.setTexView();
+				}
+			}
+		});
+	}
+	// Getter
+	public int getView() {
+		return this.iBtnClick;
 	}
 }
