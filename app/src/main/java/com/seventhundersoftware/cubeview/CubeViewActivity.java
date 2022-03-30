@@ -1,19 +1,19 @@
 package com.seventhundersoftware.cubeview;
-import static com.seventhundersoftware.cubeview.CubeViewRenderer.I_IMAGES;
-import static com.seventhundersoftware.cubeview.CubeViewRenderer.I_ISLANDS;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.pm.ConfigurationInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.util.Log;
+import android.view.View;
+import android.view.View.OnSystemUiVisibilityChangeListener;
 
 import com.seventhundersoftware.cubeview.common.TextureHelper;
+import static com.seventhundersoftware.cubeview.CubeViewConstants.*;
 
 /***
  * Copyright (c) 2021 Amy Washburn Butler
@@ -38,8 +38,6 @@ public class CubeViewActivity extends Activity
 	private CubeViewGLSurfaceView mGLSurfaceView = null;
 	private CubeViewRenderer mRenderer = null;
 	private Context mContext = null;
-	
-	private int miButtonClick = I_ISLANDS;
 
 	private static final String SETTING_VIEWS = "setting_views";
 	private static final String TAG = "CubeViewActivity";
@@ -47,32 +45,44 @@ public class CubeViewActivity extends Activity
 	private  ActivityManager  activityManager = null;
 	private ConfigurationInfo configurationInfo = null;
 	private boolean supportsEs2 = false;
-
+	private int currentApiVersion;
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.cube_view);
+
 		this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+		currentApiVersion = android.os.Build.VERSION.SDK_INT;
+
+		final int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+				View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+				View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+				View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+
+		if (currentApiVersion >= Build.VERSION_CODES.KITKAT) {
+			getWindow().getDecorView().setSystemUiVisibility(flags);
+			final View decorView = getWindow().getDecorView();
+
+			decorView.setOnSystemUiVisibilityChangeListener(new OnSystemUiVisibilityChangeListener() {
+				@Override
+				public void onSystemUiVisibilityChange(int visibility) {
+
+					if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+						decorView.setSystemUiVisibility(flags);
+					}
+				}
+			});
+		}
+
 		mGLSurfaceView = (CubeViewGLSurfaceView)findViewById(R.id.gl_surface_view);
 		mContext = this;
-		Log.d(TAG,"onCreate():"+ miButtonClick);
 
 		// Check if the system supports OpenGL ES 2.0.
 		activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 		configurationInfo = activityManager.getDeviceConfigurationInfo();
 		supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000;
-
-		// Views, by integer, in order follow:
-		// islands 0,gallery 1,river 2,lighthouse 3,cube grid 4
-		findViewById(R.id.button_views).setOnClickListener(new OnClickListener()
-		{
-			@Override
-			public void onClick(View v)
-			{
-				setViews();
-			}
-		});
 	}
 
 	/***
@@ -98,8 +108,8 @@ public class CubeViewActivity extends Activity
 		super.onResume();
 		Log.d(TAG,"onResume()");
 		SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
-		miButtonClick = sharedPrefs.getInt(SETTING_VIEWS, I_ISLANDS);
-		Log.d(TAG,"onResume() retrieved view id:"+miButtonClick);
+		int iLastView = sharedPrefs.getInt(SETTING_VIEWS, CubeViewConstants.I_ISLANDS);
+		Log.d(TAG,"onResume() retrieved view id:"+iLastView);
 		if (supportsEs2)
 		{
 			// Request an OpenGL ES 2.0 compatible context.
@@ -112,15 +122,9 @@ public class CubeViewActivity extends Activity
 			// Activity creates Renderer.
 			// SurfaceView assigns Renderer.
 			// The last parameter is the image number.
-			mRenderer = new CubeViewRenderer(this,miButtonClick);
+			mRenderer = new CubeViewRenderer(this,iLastView);
 			Log.d(TAG,"onCreate() mRenderer:"+mRenderer);
 			mGLSurfaceView.setRenderer(mRenderer, displayMetrics.density);
-
-		}
-		else 		{
-			// This is where you could create an OpenGL ES 1.x compatible
-			// renderer if you wanted to support both ES 1 and ES 2.
-			return;
 		}
 	}
 
@@ -131,10 +135,14 @@ public class CubeViewActivity extends Activity
 	protected void onPause()
 	{
 		super.onPause();
+		int iSaveView = I_ISLANDS;
 		SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
 		SharedPreferences.Editor editor = sharedPrefs.edit();
-		editor.putInt(SETTING_VIEWS, miButtonClick);
-		editor.commit();
+		if(mGLSurfaceView != null){
+			iSaveView = mGLSurfaceView.getView();
+		}
+		editor.putInt(SETTING_VIEWS, iSaveView);
+		editor.apply();
 		Log.d(TAG,"onPause()");
 	}
 
@@ -173,38 +181,5 @@ public class CubeViewActivity extends Activity
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
-	}
-
-	/***
-	 * setViews() responds to "Change" button clicks.
-	 * miButtonClick integer representing the drawable to
-	 * map to a view. In otherwords, item tells
-	 * the renderer which texture to display.
-	 * Need to queue the event to run
-	 * OpenGLES renderer on a thread.
-	 */
-	private void setViews()
-	{
-	    miButtonClick++;
-		// Currently {0..4}
-		// {I_ISLANDS...(I_IMAGES-1)}
-		if(miButtonClick == I_IMAGES){
-			miButtonClick = I_ISLANDS;
-		}
-
-		Log.d(TAG,"setViews() miButtonClick:"+ miButtonClick);
-		mGLSurfaceView.queueEvent(new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				if(mRenderer != null){
-					Log.d(TAG,"setViews() mRenderer.setTextView:");
-					mRenderer.getImage(miButtonClick);
-					mRenderer.setTexView();
-				}
-			}
-		});
-
 	}
 }
