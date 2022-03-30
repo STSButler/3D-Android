@@ -17,6 +17,7 @@ import android.util.Log;
 import com.seventhundersoftware.cubeview.common.RawResourceReader;
 import com.seventhundersoftware.cubeview.common.ShaderHelper;
 import com.seventhundersoftware.cubeview.common.TextureHelper;
+import static com.seventhundersoftware.cubeview.CubeViewConstants.*;
 
 /**
  * Copyright (c) 2021 Amy Washburn Butler
@@ -31,15 +32,9 @@ import com.seventhundersoftware.cubeview.common.TextureHelper;
  the model-view-projection matrix used to rotate the view.
 */
 public class CubeViewRenderer implements GLSurfaceView.Renderer {
+
     // Debugging output begins with:
     private static final String TAG = "CubeViewRenderer";
-    public static final int I_ISLANDS = 0;
-    public static final int I_LIGHTHOUSE = 1;
-    public static final int I_RIVER = 2;
-    public static final int I_GALLERY = 3;
-    public static final int I_GRID = 4;
-    public static final int I_IMAGES = 5;
-
     private final Context mActivityContext;
     private boolean bScale = false;
 
@@ -290,6 +285,7 @@ public class CubeViewRenderer implements GLSurfaceView.Renderer {
      */
     public void getImage(int item){
         bScale = false;
+        Log.d(TAG,"renderer.getImage():"+item);
         switch(item){
             case I_LIGHTHOUSE:
                 img =  R.drawable.scene_cube_lighthouse;
@@ -341,10 +337,11 @@ public class CubeViewRenderer implements GLSurfaceView.Renderer {
      * uniform to our new texture. Possibly
      * scale the texture up or down.
      *
-     * @param tex: integer ID of the drawable to
+
      * apply for the next view.
      */
     public void setTexView() {
+        Log.d(TAG,"renderer.setTexview()");
         if (bScalePrevious == false && bScale == true) {
             // scale up the cube:
             Matrix.scaleM(mMatrixModel, 0, F_SCALE_UP, F_SCALE_UP, F_SCALE_UP);
